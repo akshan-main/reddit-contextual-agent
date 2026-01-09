@@ -47,7 +47,7 @@ Posts go through a count-based lifecycle:
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/reddit-contextual-agent.git
+git clone https://github.com/akshan-main/reddit-contextual-agent.git
 cd reddit-contextual-agent
 python -m venv venv
 source venv/bin/activate
