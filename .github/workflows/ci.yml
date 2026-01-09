@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff check
+        run: ruff check src/
+
+      - name: Run ruff format check
+        run: ruff format --check src/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        env:
+          # Dummy values for config validation
+          REDDIT_CLIENT_ID: test_client_id
+          REDDIT_CLIENT_SECRET: test_client_secret
+          CONTEXTUAL_API_KEY: test_api_key
+          CONTEXTUAL_AGENT_ID: test_agent_id
+          CONTEXTUAL_DATASTORE_ID: test_datastore_id
+          SUPABASE_CONNECTION_STRING: postgresql://test:test@localhost:5432/test
+
+        run: pytest tests/ -v --tb=short

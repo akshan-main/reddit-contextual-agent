@@ -1,0 +1,88 @@
+name: Reddit Scraper
+
+on:
+  # Run daily at 8 AM Pacific Time (handles PST/PDT automatically)
+  # Runs at both 15:00 and 16:00 UTC to cover daylight saving transitions
+  # The job checks actual Pacific time and skips if not 8 AM
+  schedule:
+    - cron: '0 15 * * *'  # 8 AM PDT (summer)
+    - cron: '0 16 * * *'  # 8 AM PST (winter)
+
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Pipeline mode'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - scrape
+          - update
+          - queue
+
+env:
+  PYTHON_VERSION: '3.11'
+  # All timestamps use UTC for consistency (Reddit API, Supabase, logs)
+  # The 8 AM Pacific check uses explicit TZ conversion in the shell command only
+
+jobs:
+  scrape:
+    name: Scrape Reddit -> Contextual AI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if 8 AM Pacific (skip duplicate during DST transition)
+        if: github.event_name == 'schedule'
+        id: time-check
+        run: |
+          PACIFIC_HOUR=$(TZ=America/Los_Angeles date +%H)
+          echo "Current Pacific hour: $PACIFIC_HOUR"
+          if [ "$PACIFIC_HOUR" != "08" ]; then
+            echo "Not 8 AM Pacific, skipping..."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout
+        if: steps.time-check.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        if: steps.time-check.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        if: steps.time-check.outputs.skip != 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run scraper
+        if: steps.time-check.outputs.skip != 'true'
+        env:
+          # Reddit
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+
+          # Contextual AI
+          CONTEXTUAL_API_KEY: ${{ secrets.CONTEXTUAL_API_KEY }}
+          CONTEXTUAL_DATASTORE_ID: ${{ secrets.CONTEXTUAL_DATASTORE_ID }}
+          CONTEXTUAL_AGENT_ID: ${{ secrets.CONTEXTUAL_AGENT_ID }}
+
+          # Supabase
+          SUPABASE_CONNECTION_STRING: ${{ secrets.SUPABASE_CONNECTION_STRING }}
+
+          # Config
+          SUBREDDITS: contextengineering,RAG,LocalLLaMA,AgentsOfAI,AI_Agents
+          TIME_WINDOW_HOURS: 26
+          MAX_COMMENTS: 100
+
+        run: |
+          python -m reddit_agent --mode ${{ github.event.inputs.mode || 'full' }} --json-logs
