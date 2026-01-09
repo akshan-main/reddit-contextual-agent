@@ -131,20 +131,9 @@ Metadata includes: `subreddit`, `author`, `score`, `num_comments`, `created_utc`
 
 ```
 reddit-contextual-agent/
-├── src/reddit_agent/
-│   ├── __main__.py          # CLI entry point
-│   ├── config.py            # Configuration
-│   ├── models.py            # Data models
-│   ├── scraper.py           # Reddit scraping
-│   ├── contextual_client.py # Contextual AI client
-│   ├── pipeline.py          # Main orchestrator
-│   ├── logging_config.py    # Structured logging
-│   └── db/
-│       ├── base.py          # Database interface
-│       └── supabase.py      # Supabase implementation
+├── src/reddit_agent/        # All source modules
 ├── tests/
 ├── .github/workflows/
-│   └── scrape.yml           # Daily scraper
 ├── test_local.py            # Local testing
 ├── pyproject.toml
 └── .env.example

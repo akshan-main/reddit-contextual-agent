@@ -1,7 +1,7 @@
 """Pytest fixtures for Reddit Contextual Agent tests."""
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -21,8 +21,7 @@ from reddit_agent.models import PostStatus, RedditComment, RedditPost, TrackedPo
 def sample_comment():
     """Create a sample Reddit comment."""
     # Use recent date for tests that check update window
-    from datetime import timedelta
-    recent = datetime.utcnow() - timedelta(hours=2)
+    recent = datetime.now(timezone.utc) - timedelta(hours=2)
     return RedditComment(
         id="comment123",
         author="test_user",
@@ -40,8 +39,7 @@ def sample_comment():
 def sample_post(sample_comment):
     """Create a sample Reddit post with comments."""
     # Use recent date for tests that check update window
-    from datetime import timedelta
-    recent = datetime.utcnow() - timedelta(hours=1)
+    recent = datetime.now(timezone.utc) - timedelta(hours=1)
     return RedditPost(
         id="post123",
         subreddit="contextengineering",
@@ -67,8 +65,7 @@ def sample_post(sample_comment):
 def sample_tracked_post():
     """Create a sample tracked post record."""
     # Use recent date for tests that check update window
-    from datetime import timedelta
-    recent = datetime.utcnow() - timedelta(hours=1)
+    recent = datetime.now(timezone.utc) - timedelta(hours=1)
     return TrackedPost(
         post_id="post123",
         subreddit="contextengineering",
@@ -151,13 +148,15 @@ def mock_db():
     db.mark_queue_success = AsyncMock()
     db.mark_queue_failure = AsyncMock()
     db.cleanup_old_posts = AsyncMock(return_value=0)
-    db.get_stats = AsyncMock(return_value={
-        "total_tracked": 0,
-        "by_status": {},
-        "by_subreddit": {},
-        "total_comments": 0,
-        "queue_pending": 0,
-    })
+    db.get_stats = AsyncMock(
+        return_value={
+            "total_tracked": 0,
+            "by_status": {},
+            "by_subreddit": {},
+            "total_comments": 0,
+            "queue_pending": 0,
+        }
+    )
     # Add compute_content_hash as static method
     db.compute_content_hash = staticmethod(compute_content_hash)
     return db

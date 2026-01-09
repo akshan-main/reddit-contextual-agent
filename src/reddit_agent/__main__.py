@@ -23,6 +23,13 @@ def main():
     )
 
     parser.add_argument(
+        "--mode",
+        choices=["full", "scrape", "update", "queue"],
+        default="full",
+        help="Pipeline mode: full (default), scrape (new posts only), update (existing only), queue (retry failed)",
+    )
+
+    parser.add_argument(
         "--hours",
         type=int,
         help="Time window in hours (default: 26 for daily runs)",
@@ -47,14 +54,6 @@ def main():
         help="Scrape without ingesting to Contextual AI",
     )
 
-    # Hidden arg for backwards compatibility with scrape.yml
-    parser.add_argument(
-        "--mode",
-        choices=["ingest", "full"],
-        default="ingest",
-        help=argparse.SUPPRESS,
-    )
-
     args = parser.parse_args()
 
     setup_logging(level=args.log_level, json_format=args.json_logs)
@@ -70,15 +69,16 @@ def main():
 
     start = time.time()
 
-    asyncio.run(run_ingest(config, args.dry_run))
+    asyncio.run(run_pipeline(config, args.mode, args.dry_run))
 
     print(f"\nCompleted in {time.time() - start:.1f}s")
 
 
-async def run_ingest(config, dry_run: bool = False):
-    """Scrape posts and ingest to Contextual AI datastore."""
+async def run_pipeline(config, mode: str = "full", dry_run: bool = False):
+    """Run the pipeline in the specified mode."""
     from .pipeline import Pipeline
 
+    print(f"Mode: {mode}")
     print(f"Subreddits: {', '.join(config.scraper.subreddits)}")
     print(f"Time window: {config.scraper.time_window_hours} hours")
     print(f"Update window: {config.scraper.update_window_days} days")
@@ -105,10 +105,21 @@ async def run_ingest(config, dry_run: bool = False):
                     print(f"    Score: {p.score} | Comments: {p.num_comments}")
             return
 
-        stats = await pipeline.run()
+        # Run the appropriate pipeline mode
+        if mode == "full":
+            stats = await pipeline.run()
+        elif mode == "scrape":
+            stats = await pipeline.run_scrape_only()
+        elif mode == "update":
+            stats = await pipeline.run_update_only()
+        elif mode == "queue":
+            stats = await pipeline.run_queue_only()
+        else:
+            print(f"Unknown mode: {mode}")
+            sys.exit(1)
 
         print(f"\n{'=' * 60}")
-        print("PIPELINE COMPLETE")
+        print(f"PIPELINE COMPLETE ({mode.upper()} mode)")
         print(f"{'=' * 60}")
         print(f"Posts scraped:      {stats.posts_scraped}")
         print(f"New ingested:       {stats.documents_ingested}")

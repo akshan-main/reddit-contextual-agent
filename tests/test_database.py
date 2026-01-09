@@ -1,11 +1,11 @@
 """Tests for database module."""
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
-from reddit_agent.db import compute_content_hash, SupabaseDatabase
+from reddit_agent.db import SupabaseDatabase, compute_content_hash
 from reddit_agent.models import PostStatus, TrackedPost
 
 
@@ -51,7 +51,7 @@ class TestContentHash:
 # Set SUPABASE_TEST_CONNECTION_STRING env var to run these
 @pytest.mark.skipif(
     not os.getenv("SUPABASE_TEST_CONNECTION_STRING"),
-    reason="Supabase integration tests require SUPABASE_TEST_CONNECTION_STRING"
+    reason="Supabase integration tests require SUPABASE_TEST_CONNECTION_STRING",
 )
 class TestSupabaseIntegration:
     """Integration tests for Supabase database."""
@@ -133,9 +133,9 @@ class TestSupabaseIntegration:
         tracked_post = TrackedPost(
             post_id=sample_post.id,
             subreddit=sample_post.subreddit,
-            created_utc=datetime.utcnow(),
-            first_scraped=datetime.utcnow(),
-            last_updated=datetime.utcnow(),
+            created_utc=datetime.now(timezone.utc),
+            first_scraped=datetime.now(timezone.utc),
+            last_updated=datetime.now(timezone.utc),
             update_count=-1,
             status=PostStatus.NEW,
             contextual_doc_id="reddit_post_post123",

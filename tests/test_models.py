@@ -1,10 +1,8 @@
 """Tests for data models."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-import pytest
-
-from reddit_agent.models import PostStatus, RedditComment, RedditPost
+from reddit_agent.models import PostStatus, RedditPost
 
 
 class TestRedditComment:
@@ -55,7 +53,7 @@ class TestRedditPost:
             score=10,
             upvote_ratio=0.9,
             num_comments=5,
-            created_utc=datetime.utcnow() - timedelta(hours=12),
+            created_utc=datetime.now(timezone.utc) - timedelta(hours=12),
         )
         assert post.should_update(update_window_days=3) is True
 
@@ -71,7 +69,7 @@ class TestRedditPost:
             score=10,
             upvote_ratio=0.9,
             num_comments=5,
-            created_utc=datetime.utcnow() - timedelta(days=5),
+            created_utc=datetime.now(timezone.utc) - timedelta(days=5),
         )
         assert post.should_update(update_window_days=3) is False
 
