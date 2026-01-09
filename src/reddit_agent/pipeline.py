@@ -2,7 +2,7 @@
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 
@@ -15,11 +15,16 @@ from .scraper import RedditScraper
 logger = structlog.get_logger()
 
 
+def _utc_now() -> datetime:
+    """Return current UTC time as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
+
+
 @dataclass
 class PipelineStats:
     """Statistics from a pipeline run."""
 
-    started_at: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=_utc_now)
     completed_at: datetime | None = None
 
     # Scraping stats
@@ -127,8 +132,8 @@ class Pipeline:
                 post_id=post.id,
                 subreddit=post.subreddit,
                 created_utc=post.created_utc,
-                first_scraped=datetime.utcnow(),
-                last_updated=datetime.utcnow(),
+                first_scraped=_utc_now(),
+                last_updated=_utc_now(),
                 update_count=-1,
                 status=PostStatus.NEW,
                 contextual_doc_id=doc_id,
@@ -175,7 +180,7 @@ class Pipeline:
         always_reingest = self.config.scraper.always_reingest_on_refresh
 
         # Skip if already processed today (prevents double-counting on same-day reruns)
-        today = datetime.utcnow().date()
+        today = _utc_now().date()
         if tracked.last_updated.date() == today:
             logger.debug("already_processed_today", post_id=tracked.post_id)
             return True
@@ -191,7 +196,7 @@ class Pipeline:
         # If count < refresh_at, just increment and skip (let comments accumulate)
         if tracked.update_count < refresh_at:
             tracked.update_count += 1
-            tracked.last_updated = datetime.utcnow()
+            tracked.last_updated = _utc_now()
             await self.db.upsert_tracked_post(tracked)
 
             logger.debug(
@@ -235,7 +240,7 @@ class Pipeline:
             )
             tracked.status = PostStatus.FROZEN
             tracked.update_count = freeze_at  # Mark as done
-            tracked.last_updated = datetime.utcnow()
+            tracked.last_updated = _utc_now()
             await self.db.upsert_tracked_post(tracked)
             self.stats.posts_deleted += 1
             return True
@@ -255,7 +260,7 @@ class Pipeline:
                 update_count=tracked.update_count,
             )
             tracked.update_count += 1
-            tracked.last_updated = datetime.utcnow()
+            tracked.last_updated = _utc_now()
             await self.db.upsert_tracked_post(tracked)
             self.stats.skipped_unchanged += 1
             return True
@@ -273,7 +278,7 @@ class Pipeline:
             )
 
             # Update tracking
-            tracked.last_updated = datetime.utcnow()
+            tracked.last_updated = _utc_now()
             tracked.update_count += 1
             tracked.status = PostStatus.UPDATING
             tracked.content_hash = new_hash
@@ -316,7 +321,7 @@ class Pipeline:
         )
 
         tracked.status = PostStatus.FROZEN
-        tracked.last_updated = datetime.utcnow()
+        tracked.last_updated = _utc_now()
         await self.db.upsert_tracked_post(tracked)
 
         self.stats.frozen_posts += 1
@@ -475,7 +480,7 @@ class Pipeline:
                     )
 
                     tracked.content_hash = new_hash
-                    tracked.last_updated = datetime.utcnow()
+                    tracked.last_updated = _utc_now()
                     await self.db.upsert_tracked_post(tracked)
 
                     logger.info("fixed_missing_hash", post_id=tracked.post_id)
@@ -483,7 +488,7 @@ class Pipeline:
                 else:
                     # Post deleted
                     tracked.status = PostStatus.FROZEN
-                    tracked.last_updated = datetime.utcnow()
+                    tracked.last_updated = _utc_now()
                     await self.db.upsert_tracked_post(tracked)
                     self.stats.posts_deleted += 1
 
@@ -543,7 +548,7 @@ class Pipeline:
             # Phase 6: Cleanup old posts (> 30 days default)
             await self.cleanup()
 
-            self.stats.completed_at = datetime.utcnow()
+            self.stats.completed_at = _utc_now()
 
             # Log final stats
             db_stats = await self.db.get_stats()
@@ -565,7 +570,7 @@ class Pipeline:
 
         self.stats = PipelineStats()
         await self.scrape_and_process_new()
-        self.stats.completed_at = datetime.utcnow()
+        self.stats.completed_at = _utc_now()
 
         return self.stats
 
@@ -577,7 +582,7 @@ class Pipeline:
         await self._process_queue()
         await self.update_existing_posts()
         await self.freeze_old_posts()
-        self.stats.completed_at = datetime.utcnow()
+        self.stats.completed_at = _utc_now()
 
         return self.stats
 
@@ -587,7 +592,7 @@ class Pipeline:
 
         self.stats = PipelineStats()
         await self._process_queue()
-        self.stats.completed_at = datetime.utcnow()
+        self.stats.completed_at = _utc_now()
 
         return self.stats
 

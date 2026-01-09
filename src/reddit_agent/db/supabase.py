@@ -3,7 +3,7 @@
 Used for production deployment. Connects directly to Supabase's PostgreSQL instance.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import asyncpg
 import structlog
@@ -136,9 +136,9 @@ class SupabaseDatabase:
                 return TrackedPost(
                     post_id=row["post_id"],
                     subreddit=row["subreddit"],
-                    created_utc=row["created_utc"].replace(tzinfo=None),
-                    first_scraped=row["first_scraped"].replace(tzinfo=None),
-                    last_updated=row["last_updated"].replace(tzinfo=None),
+                    created_utc=row["created_utc"],
+                    first_scraped=row["first_scraped"],
+                    last_updated=row["last_updated"],
                     update_count=row["update_count"],
                     status=PostStatus(row["status"]),
                     contextual_doc_id=row["contextual_doc_id"],
@@ -250,7 +250,7 @@ class SupabaseDatabase:
                 author=cr["author"],
                 body=cr["body"],
                 score=cr["score"],
-                created_utc=cr["created_utc"].replace(tzinfo=None),
+                created_utc=cr["created_utc"],
                 parent_id=cr["parent_id"],
                 is_submitter=cr["is_submitter"],
                 depth=cr["depth"],
@@ -269,13 +269,13 @@ class SupabaseDatabase:
             score=row["score"],
             upvote_ratio=row["upvote_ratio"],
             num_comments=row["num_comments"],
-            created_utc=row["created_utc"].replace(tzinfo=None),
+            created_utc=row["created_utc"],
             edited=row["edited"],
             link_flair_text=row["link_flair_text"],
             is_self=row["is_self"],
             comments=comments,
-            scraped_at=row["scraped_at"].replace(tzinfo=None),
-            last_updated=row["last_updated"].replace(tzinfo=None),
+            scraped_at=row["scraped_at"],
+            last_updated=row["last_updated"],
             update_count=row["update_count"],
         )
 
@@ -297,9 +297,9 @@ class SupabaseDatabase:
             TrackedPost(
                 post_id=row["post_id"],
                 subreddit=row["subreddit"],
-                created_utc=row["created_utc"].replace(tzinfo=None),
-                first_scraped=row["first_scraped"].replace(tzinfo=None),
-                last_updated=row["last_updated"].replace(tzinfo=None),
+                created_utc=row["created_utc"],
+                first_scraped=row["first_scraped"],
+                last_updated=row["last_updated"],
                 update_count=row["update_count"],
                 status=PostStatus(row["status"]),
                 contextual_doc_id=row["contextual_doc_id"],
@@ -321,9 +321,9 @@ class SupabaseDatabase:
             TrackedPost(
                 post_id=row["post_id"],
                 subreddit=row["subreddit"],
-                created_utc=row["created_utc"].replace(tzinfo=None),
-                first_scraped=row["first_scraped"].replace(tzinfo=None),
-                last_updated=row["last_updated"].replace(tzinfo=None),
+                created_utc=row["created_utc"],
+                first_scraped=row["first_scraped"],
+                last_updated=row["last_updated"],
                 update_count=row["update_count"],
                 status=PostStatus(row["status"]),
                 contextual_doc_id=row["contextual_doc_id"],
@@ -374,7 +374,7 @@ class SupabaseDatabase:
             attempts = row["attempts"] if row else 0
 
             delay = timedelta(minutes=5 * (2**attempts))  # 5, 10, 20, 40, 80 minutes
-            next_retry = datetime.utcnow() + delay
+            next_retry = datetime.now(timezone.utc) + delay
 
             await conn.execute(
                 """
@@ -416,7 +416,7 @@ class SupabaseDatabase:
 
     async def cleanup_old_posts(self, days: int = 30) -> int:
         """Remove posts older than specified days."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
         async with self._pool.acquire() as conn:
             async with conn.transaction():
@@ -463,9 +463,9 @@ class SupabaseDatabase:
             TrackedPost(
                 post_id=row["post_id"],
                 subreddit=row["subreddit"],
-                created_utc=row["created_utc"].replace(tzinfo=None),
-                first_scraped=row["first_scraped"].replace(tzinfo=None),
-                last_updated=row["last_updated"].replace(tzinfo=None),
+                created_utc=row["created_utc"],
+                first_scraped=row["first_scraped"],
+                last_updated=row["last_updated"],
                 update_count=row["update_count"],
                 status=PostStatus(row["status"]),
                 contextual_doc_id=row["contextual_doc_id"],

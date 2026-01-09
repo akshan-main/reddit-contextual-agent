@@ -1,9 +1,14 @@
 """Data models for Reddit posts and comments."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import BaseModel, Field, computed_field
+
+
+def _utc_now() -> datetime:
+    """Return current UTC time as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
 
 
 class PostStatus(str, Enum):
@@ -77,8 +82,8 @@ class RedditPost(BaseModel):
     comments: list[RedditComment] = Field(default_factory=list)
 
     # Tracking metadata (added by our system)
-    scraped_at: datetime = Field(default_factory=datetime.utcnow)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    scraped_at: datetime = Field(default_factory=_utc_now)
+    last_updated: datetime = Field(default_factory=_utc_now)
     update_count: int = 0
 
     @computed_field
@@ -89,7 +94,9 @@ class RedditPost(BaseModel):
     @computed_field
     @property
     def age_days(self) -> float:
-        return (datetime.utcnow() - self.created_utc).total_seconds() / 86400
+        now = datetime.now(timezone.utc)
+        created = self.created_utc if self.created_utc.tzinfo else self.created_utc.replace(tzinfo=timezone.utc)
+        return (now - created).total_seconds() / 86400
 
     def should_update(self, update_window_days: int = 3) -> bool:
         """Check if this post should still be updated."""
@@ -147,7 +154,11 @@ class RedditPost(BaseModel):
                 "score": self.score,
                 "upvote_ratio": self.upvote_ratio,
                 "num_comments": self.num_comments,
-                "created_utc": int(self.created_utc.timestamp()),
+                "created_utc": int(
+                    (
+                        self.created_utc if self.created_utc.tzinfo else self.created_utc.replace(tzinfo=timezone.utc)
+                    ).timestamp()
+                ),
                 "url": self.full_url,
                 "external_url": self.url if not self.is_self else None,
                 "is_self": self.is_self,

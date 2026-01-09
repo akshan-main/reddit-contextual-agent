@@ -178,7 +178,11 @@ class ContextualClient:
         - Attribution links
         """
         # Convert to Pacific for user-friendly date filtering
-        dt_utc = post.created_utc.replace(tzinfo=timezone.utc)
+        # Handle both timezone-aware and naive datetimes
+        if post.created_utc.tzinfo is None:
+            dt_utc = post.created_utc.replace(tzinfo=timezone.utc)
+        else:
+            dt_utc = post.created_utc.astimezone(timezone.utc)
         dt_pacific = dt_utc.astimezone(PACIFIC_TZ)
 
         return {

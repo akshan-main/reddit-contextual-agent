@@ -1,7 +1,7 @@
 [project]
 name = "reddit-contextual-agent"
 version = "0.2.0"
-description = "Reddit scraper and data pipeline for Contextual AI Agent Composer"
+description = "Reddit scraper and data pipeline for Contextual AI Agent"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

@@ -4,12 +4,12 @@ A production data pipeline that scrapes Reddit posts from AI-focused subreddits 
 
 ## Features
 
-- **Time-Based Scraping**: Fetches ALL posts within a time window (not count-limited)
+- **Scraping**: Fetches ALL posts within a time window
 - **Supabase Backend**: PostgreSQL for state management and tracking
-- **3-Day Update Cycle**: Posts tracked for 3 days with refresh, then frozen
-- **Smart Re-ingestion**: Only re-ingest when comments actually change
+- **Update Cycle**: Posts tracked for 3 days with refresh, then frozen
+- **Re-ingestion**: Only re-ingest when comments actually change
 - **Bot Filtering**: Excludes AutoModerator and known bots
-- **Dual Timezone Display**: Shows Pacific + UTC for user-friendly queries
+- **Dual Timezone**: Records Pacific + UTC
 - **GitHub Actions**: Daily automated scraping at 8 AM Pacific
 
 ## Architecture
@@ -17,7 +17,7 @@ A production data pipeline that scrapes Reddit posts from AI-focused subreddits 
 ```
 ┌─────────────────┐     ┌──────────────┐     ┌─────────────────────┐
 │  Reddit API     │────▶│   Scraper    │────▶│  Supabase           │
-│  (PRAW)         │     │  (Rate Ltd)  │     │  (PostgreSQL)       │
+│  (PRAW)         │     │              │     │  (PostgreSQL)       │
 └─────────────────┘     └──────────────┘     └─────────────────────┘
                                                        │
                                                        ▼
@@ -56,27 +56,7 @@ pip install -e .
 
 ### Configuration
 
-Copy `.env.example` to `.env` and fill in:
-
-```bash
-# Reddit API
-REDDIT_CLIENT_ID=your_client_id
-REDDIT_CLIENT_SECRET=your_client_secret
-
-# Contextual AI
-CONTEXTUAL_API_KEY=your_api_key
-CONTEXTUAL_DATASTORE_ID=your_datastore_id
-
-# Supabase (use pooler URL with port 6543)
-SUPABASE_CONNECTION_STRING=postgresql://postgres.xxx:[PASSWORD]@aws-0-us-west-1.pooler.supabase.com:6543/postgres
-```
-
-### Supabase Setup
-
-1. Create a new Supabase project
-2. Go to **Settings > Database > Connection string**
-3. Copy the **Transaction pooler** connection string (port 6543)
-4. URL-encode any special characters in your password
+Copy `.env.example` to `.env` and fill in the api keys and supabase link
 
 ## Usage
 
@@ -136,15 +116,14 @@ Add these to your repository settings:
 | `id`, `subreddit`, `author`, `title`, `selftext` | Core post data |
 | `score`, `num_comments`, `upvote_ratio` | Engagement metrics |
 | `created_utc`, `edited` | Timestamps |
-| `comments` (up to 100) | With author, body, score, depth |
+| `comments` (up to 100) | With author, body, score(proxy for upvotes - downvotes), depth |
 
 ### What's Ingested
 
 Posts are converted to HTML documents with:
 - Full post content with metadata
 - All comments (sorted by score)
-- Dual timezone display (Pacific + UTC)
-- Structured for RAG retrieval
+- Timezone (Pacific + UTC)
 
 Metadata includes: `subreddit`, `author`, `score`, `num_comments`, `created_utc`, `created_pacific`, `date_pacific`
 
@@ -170,7 +149,3 @@ reddit-contextual-agent/
 ├── pyproject.toml
 └── .env.example
 ```
-
-## License
-
-MIT

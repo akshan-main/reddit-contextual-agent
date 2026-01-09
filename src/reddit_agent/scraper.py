@@ -264,7 +264,7 @@ class RedditScraper:
                         author=author_name,
                         body=comment.body,
                         score=comment.score,
-                        created_utc=datetime.utcfromtimestamp(comment.created_utc),
+                        created_utc=datetime.fromtimestamp(comment.created_utc, tz=timezone.utc),
                         parent_id=comment.parent_id,
                         is_submitter=comment.is_submitter,
                         edited=bool(comment.edited),
@@ -303,7 +303,7 @@ class RedditScraper:
             score=submission.score,
             upvote_ratio=submission.upvote_ratio,
             num_comments=submission.num_comments,
-            created_utc=datetime.utcfromtimestamp(submission.created_utc),
+            created_utc=datetime.fromtimestamp(submission.created_utc, tz=timezone.utc),
             edited=bool(submission.edited),
             link_flair_text=submission.link_flair_text,
             link_flair_css_class=submission.link_flair_css_class,
@@ -319,8 +319,8 @@ class RedditScraper:
             thumbnail=submission.thumbnail if submission.thumbnail != "self" else None,
             media_url=media_url,
             comments=comments,
-            scraped_at=datetime.utcnow(),
-            last_updated=datetime.utcnow(),
+            scraped_at=datetime.now(timezone.utc),
+            last_updated=datetime.now(timezone.utc),
         )
 
     async def scrape_subreddit(
