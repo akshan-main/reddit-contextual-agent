@@ -126,6 +126,7 @@ async def run_pipeline(config, mode: str = "full", dry_run: bool = False):
         print(f"Re-ingested:        {stats.documents_reingested}")
         print(f"Skipped (no change):{stats.skipped_unchanged}")
         print(f"Frozen:             {stats.frozen_posts}")
+        print(f"Deleted:            {stats.posts_deleted}")
         print(f"Errors:             {stats.sync_errors}")
 
 

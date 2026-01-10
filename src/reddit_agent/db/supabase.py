@@ -473,3 +473,15 @@ class SupabaseDatabase:
             )
             for row in rows
         ]
+
+    async def delete_post(self, post_id: str) -> bool:
+        """Delete a post from database (Reddit Data API compliance)."""
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute("DELETE FROM comments WHERE post_id = $1", post_id)
+                await conn.execute("DELETE FROM posts WHERE id = $1", post_id)
+                result = await conn.execute("DELETE FROM tracked_posts WHERE post_id = $1", post_id)
+                deleted = result.split()[-1] != "0"
+                if deleted:
+                    logger.info("post_deleted_from_database", post_id=post_id)
+                return deleted

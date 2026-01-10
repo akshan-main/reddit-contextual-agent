@@ -418,13 +418,25 @@ class RedditScraper:
 
         return all_posts, failed_subreddits
 
+    def _is_post_deleted(self, submission: praw.models.Submission) -> bool:
+        """Check if a post has been deleted or removed."""
+        if submission.author is None:
+            return True
+        if submission.selftext in ("[deleted]", "[removed]"):
+            return True
+        return False
+
     async def refresh_post(self, post_id: str) -> RedditPost | None:
-        """Refresh a single post's data."""
+        """Refresh a single post's data. Returns None if deleted/removed."""
         logger.debug("refreshing_post", post_id=post_id)
 
         try:
             submission = await self._fetch_post_by_id(post_id)
             if not submission:
+                return None
+
+            if self._is_post_deleted(submission):
+                logger.info("post_deleted_detected", post_id=post_id)
                 return None
 
             comments = await self._fetch_comments(

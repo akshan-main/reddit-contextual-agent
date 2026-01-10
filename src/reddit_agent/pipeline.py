@@ -3,6 +3,7 @@
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import structlog
 
@@ -14,10 +15,24 @@ from .scraper import RedditScraper
 
 logger = structlog.get_logger()
 
+PACIFIC_TZ = ZoneInfo("America/Los_Angeles")
+
 
 def _utc_now() -> datetime:
     """Return current UTC time as timezone-aware datetime."""
     return datetime.now(timezone.utc)
+
+
+def _pacific_today():
+    """Return today's date in Pacific timezone."""
+    return datetime.now(PACIFIC_TZ).date()
+
+
+def _to_pacific_date(dt: datetime):
+    """Convert a datetime to Pacific date."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(PACIFIC_TZ).date()
 
 
 @dataclass
@@ -55,6 +70,7 @@ class PipelineStats:
             "new_posts": self.new_posts,
             "updated_posts": self.updated_posts,
             "frozen_posts": self.frozen_posts,
+            "posts_deleted": self.posts_deleted,
             "documents_ingested": self.documents_ingested,
             "documents_reingested": self.documents_reingested,
             "skipped_unchanged": self.skipped_unchanged,
@@ -97,6 +113,25 @@ class Pipeline:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.db.close()
         await self.contextual.close()
+
+    async def _handle_deleted_post(self, tracked: TrackedPost) -> None:
+        """Remove deleted post from Contextual AI and database."""
+        if tracked.contextual_doc_id:
+            try:
+                await self.contextual.delete_document(tracked.contextual_doc_id)
+                logger.info(
+                    "deleted_post_removed_from_datastore",
+                    post_id=tracked.post_id,
+                    doc_id=tracked.contextual_doc_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "delete_from_datastore_failed",
+                    post_id=tracked.post_id,
+                    error=str(e),
+                )
+        await self.db.delete_post(tracked.post_id)
+        self.stats.posts_deleted += 1
 
     async def _process_new_post(self, post: RedditPost) -> str | None:
         """
@@ -179,9 +214,8 @@ class Pipeline:
         freeze_at = self.config.scraper.freeze_at_count
         always_reingest = self.config.scraper.always_reingest_on_refresh
 
-        # Skip if already processed today (prevents double-counting on same-day reruns)
-        today = _utc_now().date()
-        if tracked.last_updated.date() == today:
+        # Skip if already processed today (Pacific time, matches 8 AM Pacific run)
+        if _to_pacific_date(tracked.last_updated) == _pacific_today():
             logger.debug("already_processed_today", post_id=tracked.post_id)
             return True
 
@@ -232,17 +266,10 @@ class Pipeline:
             self.stats.queued_for_retry += 1
             return False
 
-        # Handle deleted posts
+        # Handle deleted posts - remove from datastore and database
         if not post:
-            logger.warning(
-                "post_deleted_or_unavailable",
-                post_id=tracked.post_id,
-            )
-            tracked.status = PostStatus.FROZEN
-            tracked.update_count = freeze_at  # Mark as done
-            tracked.last_updated = _utc_now()
-            await self.db.upsert_tracked_post(tracked)
-            self.stats.posts_deleted += 1
+            logger.warning("post_deleted_or_unavailable", post_id=tracked.post_id)
+            await self._handle_deleted_post(tracked)
             return True
 
         # Check if content actually changed
@@ -486,11 +513,8 @@ class Pipeline:
                     logger.info("fixed_missing_hash", post_id=tracked.post_id)
                     self.stats.documents_reingested += 1
                 else:
-                    # Post deleted
-                    tracked.status = PostStatus.FROZEN
-                    tracked.last_updated = _utc_now()
-                    await self.db.upsert_tracked_post(tracked)
-                    self.stats.posts_deleted += 1
+                    # Post deleted - remove from datastore and database
+                    await self._handle_deleted_post(tracked)
 
             except Exception as e:
                 logger.warning("fix_hash_failed", post_id=tracked.post_id, error=str(e))
