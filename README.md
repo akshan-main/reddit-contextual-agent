@@ -1,6 +1,6 @@
 # Reddit Contextual Agent
 
-A production data pipeline that scrapes Reddit posts from AI-focused subreddits and syncs them to [Contextual AI](https://contextual.ai) for building RAG-powered agents.
+A data pipeline that scrapes Reddit posts from AI-focused subreddits and syncs them to [Contextual AI](https://contextual.ai) for building RAG-powered agents.
 
 ## Features
 
@@ -9,7 +9,6 @@ A production data pipeline that scrapes Reddit posts from AI-focused subreddits 
 - **Update Cycle**: Posts tracked for 3 days with refresh, then frozen
 - **Re-ingestion**: Only re-ingest when comments actually change
 - **Bot Filtering**: Excludes AutoModerator and known bots
-- **Dual Timezone**: Records Pacific + UTC
 - **GitHub Actions**: Daily automated scraping at 8 AM Pacific
 
 ## Architecture
