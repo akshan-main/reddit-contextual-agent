@@ -82,13 +82,18 @@ class TestContextualClient:
 
         assert metadata["subreddit"] == sample_post.subreddit
         assert metadata["author"] == sample_post.author
+        assert metadata["title"] == sample_post.title
         assert metadata["score"] == sample_post.score
+        assert metadata["upvote_ratio"] == sample_post.upvote_ratio
         assert metadata["num_comments"] == sample_post.num_comments
         assert metadata["post_id"] == sample_post.id
+        assert metadata["is_self"] == sample_post.is_self
         assert "url" in metadata
         assert "created_utc" in metadata
         assert "created_pacific" in metadata
         assert "date_pacific" in metadata
+        assert "flair" in metadata
+        assert "external_url" in metadata
 
     def test_get_metadata_handles_naive_datetime(self, client, sample_post):
         """Test metadata handles naive datetime."""

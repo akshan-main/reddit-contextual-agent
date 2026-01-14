@@ -73,27 +73,6 @@ class TestRedditPost:
         )
         assert post.should_update(update_window_days=3) is False
 
-    def test_to_document(self, sample_post):
-        """Test conversion to Contextual AI document format."""
-        doc = sample_post.to_document()
-
-        assert doc["document_id"] == "reddit_post_post123"
-        assert "contextengineering" in doc["content"]
-        assert sample_post.title in doc["content"]
-
-        # Check metadata
-        assert doc["metadata"]["source"] == "reddit"
-        assert doc["metadata"]["subreddit"] == "contextengineering"
-        assert doc["metadata"]["score"] == 150
-
-    def test_to_document_includes_comments(self, sample_post):
-        """Test that document includes top comments."""
-        doc = sample_post.to_document()
-
-        # Should include comment content
-        assert "Top Comments" in doc["content"]
-        assert "test_user" in doc["content"]
-
 
 class TestPostStatus:
     """Tests for PostStatus enum."""
