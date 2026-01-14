@@ -197,7 +197,8 @@ class ContextualClient:
             "date_pacific": dt_pacific.strftime("%Y-%m-%d"),  # For "posts from yesterday" queries
             "post_id": post.id,
             "is_self": post.is_self,  # Text post vs link post
-            "external_url": post.url if not post.is_self and post.url != post.full_url else None,  # For domain filtering
+            # For domain filtering
+            "external_url": post.url if not post.is_self and post.url != post.full_url else None,
             "flair": post.link_flair_text,  # For category filtering
         }
 
