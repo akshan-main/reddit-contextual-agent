@@ -227,7 +227,7 @@ class Pipeline:
             freeze_at=freeze_at,
         )
 
-        # If count < refresh_at, just increment and skip (let comments accumulate)
+        # If count < refresh_at, just increment and skip (letting comments accumulate)
         if tracked.update_count < refresh_at:
             tracked.update_count += 1
             tracked.last_updated = _utc_now()
@@ -553,22 +553,16 @@ class Pipeline:
         try:
             # Phase 0: Process any pending retry items first
             await self._process_queue()
-
             # Phase 1: Fix posts with missing hashes
             await self.fix_missing_hashes()
-
             # Phase 2: Scrape and process new posts
             await self.scrape_and_process_new()
-
             # Phase 3: Update existing posts within window
             await self.update_existing_posts()
-
             # Phase 4: Freeze old posts
             await self.freeze_old_posts()
-
             # Phase 5: Process any new queue items from this run
             await self._process_queue()
-
             # Phase 6: Cleanup old posts (> 30 days default)
             await self.cleanup()
 

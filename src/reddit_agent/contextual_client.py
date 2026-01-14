@@ -24,7 +24,7 @@ from .models import RedditPost
 
 logger = structlog.get_logger()
 
-# Pacific timezone for user-friendly display
+# Pacific timezone
 PACIFIC_TZ = ZoneInfo("America/Los_Angeles")
 
 
@@ -39,7 +39,6 @@ def format_datetime_dual(dt: datetime) -> str:
     # Convert to Pacific
     dt_pacific = dt_utc.astimezone(PACIFIC_TZ)
 
-    # Format: "Jan 8, 2024 at 11:00 PM PST (2024-01-09 07:00 UTC)"
     pacific_str = dt_pacific.strftime("%b %d, %Y at %I:%M %p %Z")
     utc_str = dt_utc.strftime("%Y-%m-%d %H:%M UTC")
 
@@ -189,12 +188,17 @@ class ContextualClient:
             "url": post.full_url,  # Included in attributions
             "subreddit": post.subreddit,
             "author": post.author,
+            "title": post.title,  # For exact title matching
             "score": post.score,
+            "upvote_ratio": post.upvote_ratio,  # For filtering controversial posts
             "num_comments": post.num_comments,
             "created_utc": post.created_utc.isoformat(),
             "created_pacific": dt_pacific.isoformat(),
             "date_pacific": dt_pacific.strftime("%Y-%m-%d"),  # For "posts from yesterday" queries
             "post_id": post.id,
+            "is_self": post.is_self,  # Text post vs link post
+            "external_url": post.url if not post.is_self and post.url != post.full_url else None,  # For domain filtering
+            "flair": post.link_flair_text,  # For category filtering
         }
 
     @retry(
@@ -373,7 +377,7 @@ class ContextualClient:
             # Comments changed - re-ingest to update indexed content
             return await self.update_document(post, existing_doc_id)
 
-        # Content same - nothing to do
+        # Content same - no action needed
         logger.debug("content_unchanged_skipping", post_id=post.id)
         return existing_doc_id
 

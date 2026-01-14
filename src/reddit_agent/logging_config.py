@@ -42,7 +42,7 @@ def setup_logging(
             structlog.processors.JSONRenderer(),
         ]
     else:
-        # Human-readable format for development
+        # Human-readable format
         processors = shared_processors + [
             structlog.dev.ConsoleRenderer(colors=True),
         ]

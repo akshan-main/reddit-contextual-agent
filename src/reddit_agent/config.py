@@ -23,7 +23,7 @@ class ContextualConfig:
 
     api_key: str = field(default_factory=lambda: os.environ["CONTEXTUAL_API_KEY"])
     datastore_id: str = field(default_factory=lambda: os.environ["CONTEXTUAL_DATASTORE_ID"])
-    # Agent ID is optional - only needed for RAG summaries
+    # Optional since we haven't used agents thus far
     agent_id: str = field(default_factory=lambda: os.getenv("CONTEXTUAL_AGENT_ID", ""))
     # API base URL
     base_url: str = field(default_factory=lambda: os.getenv("CONTEXTUAL_API_URL", "https://api.contextual.ai"))
@@ -47,13 +47,13 @@ class ScraperConfig:
     update_window_days: int = field(default_factory=lambda: int(os.getenv("UPDATE_WINDOW_DAYS", "2")))
     # Max comments per post
     max_comments: int = field(default_factory=lambda: int(os.getenv("MAX_COMMENTS", "100")))
-    # Rate limiting
+    # Rate limiting (Reddit allows upto 60 per minute)
     requests_per_minute: int = field(default_factory=lambda: int(os.getenv("REQUESTS_PER_MINUTE", "30")))
     min_request_delay: float = field(default_factory=lambda: float(os.getenv("MIN_REQUEST_DELAY", "2.0")))
     # Include comments in posts
     include_comments: bool = field(default_factory=lambda: os.getenv("INCLUDE_COMMENTS", "true").lower() == "true")
 
-    # === REFRESH SETTINGS (configurable) ===
+    # REFRESH SETTINGS
     # At which update_count to do the refresh check (default: 1 means Day 2)
     # Set to 0 to check on every scraper run after initial ingest
     # Set to 2 to wait until Day 3, etc.
@@ -75,9 +75,6 @@ class ScraperConfig:
 @dataclass
 class SupabaseConfig:
     """Supabase database configuration."""
-
-    # Connection string from Supabase dashboard (Settings > Database > Connection string)
-    # Format: postgresql://postgres:[password]@[host]:5432/postgres
     connection_string: str = field(default_factory=lambda: os.environ["SUPABASE_CONNECTION_STRING"])
 
 

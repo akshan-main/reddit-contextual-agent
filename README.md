@@ -128,7 +128,7 @@ Posts are converted to HTML documents with:
 - All comments (sorted by score)
 - Timezone (Pacific + UTC)
 
-Metadata includes: `subreddit`, `author`, `score`, `num_comments`, `created_utc`, `created_pacific`, `date_pacific`
+Metadata includes: `subreddit`, `author`, `title`, `score`, `upvote_ratio`, `num_comments`, `created_utc`, `created_pacific`, `date_pacific`, `post_id`, `is_self`, `external_url`, `flair`
 
 ### Sample Ingested Documents
 
