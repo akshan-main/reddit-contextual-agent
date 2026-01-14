@@ -75,6 +75,7 @@ class ScraperConfig:
 @dataclass
 class SupabaseConfig:
     """Supabase database configuration."""
+
     connection_string: str = field(default_factory=lambda: os.environ["SUPABASE_CONNECTION_STRING"])
 
 
