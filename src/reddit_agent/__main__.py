@@ -3,7 +3,7 @@
 Workflow:
 1. Scrape posts from configured subreddits
 2. Convert to HTML and ingest to Contextual AI datastore
-3. Track posts for 3-day update window (re-ingest when content changes)
+3. Track posts for 4-day update window (re-ingest when content changes)
 4. Query the agent via Contextual AI web UI (Agent Composer)
 """
 

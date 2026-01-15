@@ -54,12 +54,10 @@ class ScraperConfig:
     include_comments: bool = field(default_factory=lambda: os.getenv("INCLUDE_COMMENTS", "true").lower() == "true")
 
     # REFRESH SETTINGS
-    # At which update_count to do the refresh check (default: 1 means Day 2)
-    # Set to 0 to check on every scraper run after initial ingest
-    # Set to 2 to wait until Day 3, etc.
-    refresh_at_count: int = field(default_factory=lambda: int(os.getenv("REFRESH_AT_COUNT", "1")))
-    # When to freeze (default: 2 = freeze on Day 3)
-    # Count progression: -1 (Day 0) -> 0 (Day 1) -> 1 (Day 2) -> 2 (Day 3, freeze)
+    # At which update_count to start refreshing (default: 0 means Day 3)
+    # Count progression: -1 (Day 1, scrape) -> 0 (Day 2, skip) -> 1 (Day 3, refresh) -> 2 (Day 4, freeze)
+    refresh_at_count: int = field(default_factory=lambda: int(os.getenv("REFRESH_AT_COUNT", "0")))
+    # When to freeze (default: 2 = freeze on Day 4)
     freeze_at_count: int = field(default_factory=lambda: int(os.getenv("FREEZE_AT_COUNT", "2")))
     # Whether to always re-ingest on refresh, or only if content changed
     # True = always re-ingest at refresh_at_count

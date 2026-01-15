@@ -279,7 +279,7 @@ class SupabaseDatabase:
             update_count=row["update_count"],
         )
 
-    async def get_posts_to_update(self, freeze_at_count: int = 3) -> list[TrackedPost]:
+    async def get_posts_to_update(self, freeze_at_count: int = 2) -> list[TrackedPost]:
         """Get posts that need processing in the update cycle."""
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
@@ -308,7 +308,7 @@ class SupabaseDatabase:
             for row in rows
         ]
 
-    async def get_posts_to_freeze(self, freeze_at_count: int = 3) -> list[TrackedPost]:
+    async def get_posts_to_freeze(self, freeze_at_count: int = 2) -> list[TrackedPost]:
         """Get posts ready to be frozen."""
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(

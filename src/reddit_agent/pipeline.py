@@ -51,7 +51,7 @@ class PipelineStats:
 
     # Sync stats
     documents_ingested: int = 0
-    documents_reingested: int = 0  # Existing posts re-ingested on Day 2 refresh
+    documents_reingested: int = 0  # Existing posts re-ingested on Day 3-4 refresh
     skipped_unchanged: int = 0  # Posts where count was just incremented (no API call)
     sync_errors: int = 0
 
@@ -162,7 +162,7 @@ class Pipeline:
 
             # Create tracking record
             # update_count starts at -1:
-            # -1 -> 0 -> 1 (refresh here) -> 2 (freeze)
+            # -1 (Day 1, scrape) -> 0 (Day 2, skip) -> 1 (Day 3, refresh) -> 2 (Day 4, freeze)
             tracked = TrackedPost(
                 post_id=post.id,
                 subreddit=post.subreddit,
@@ -203,12 +203,12 @@ class Pipeline:
         Update post based on scrape count.
 
         Configurable via:
-        - refresh_at_count: When to check for updates (default 1 = Day 2)
-        - freeze_at_count: When to stop tracking (default 3 = Day 3)
+        - refresh_at_count: When to start refreshing (default 0 = Day 3)
+        - freeze_at_count: When to stop tracking (default 2 = Day 4)
         - always_reingest_on_refresh: If False, only re-ingest when content changed
 
         Count progression example (defaults):
-        -1 (Day 0, ingest) -> 0 -> 1 (refresh check) -> 2 -> 3 (freeze)
+        -1 (Day 1, scrape) -> 0 (Day 2, skip) -> 1 (Day 3, refresh) -> 2 (Day 4, freeze)
         """
         refresh_at = self.config.scraper.refresh_at_count
         freeze_at = self.config.scraper.freeze_at_count
@@ -280,7 +280,43 @@ class Pipeline:
         should_reingest = always_reingest or content_changed
 
         if not should_reingest:
-            # No changes, just increment count
+            # Content unchanged - check if metadata changed
+            old_post = await self.db.get_post(tracked.post_id)
+            metadata_changed = False
+
+            if old_post:
+                metadata_changed = (
+                    old_post.score != post.score
+                    or old_post.num_comments != post.num_comments
+                    or old_post.upvote_ratio != post.upvote_ratio
+                )
+
+            if metadata_changed and tracked.contextual_doc_id:
+                # Metadata-only update (cheaper than re-ingesting)
+                logger.info(
+                    "metadata_only_update",
+                    post_id=tracked.post_id,
+                    old_score=old_post.score if old_post else None,
+                    new_score=post.score,
+                )
+
+                success = await self.contextual.set_metadata(tracked.contextual_doc_id, post)
+                if success:
+                    # Save updated post with new metadata
+                    post.update_count = tracked.update_count + 1
+                    await self.db.save_post(post)
+
+                    # Update tracking
+                    tracked.update_count += 1
+                    tracked.last_updated = _utc_now()
+                    await self.db.upsert_tracked_post(tracked)
+                    self.stats.updated_posts += 1
+                    return True
+                else:
+                    logger.warning("metadata_update_failed", post_id=tracked.post_id)
+                    # Fall through to skip behavior
+
+            # No changes at all, just increment count
             logger.info(
                 "no_changes_skipping_reingest",
                 post_id=tracked.post_id,

@@ -42,11 +42,11 @@ class DatabaseProtocol(Protocol):
         """Get a post from local cache."""
         ...
 
-    async def get_posts_to_update(self, freeze_at_count: int = 3) -> list[TrackedPost]:
+    async def get_posts_to_update(self, freeze_at_count: int = 2) -> list[TrackedPost]:
         """Get posts that need processing in the update cycle."""
         ...
 
-    async def get_posts_to_freeze(self, freeze_at_count: int = 3) -> list[TrackedPost]:
+    async def get_posts_to_freeze(self, freeze_at_count: int = 2) -> list[TrackedPost]:
         """Get posts ready to be frozen."""
         ...
 

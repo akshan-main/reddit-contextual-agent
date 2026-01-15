@@ -30,13 +30,15 @@ A data pipeline that scrapes Reddit posts from RAG-focused subreddits and syncs 
 ### Update Cycle
 
 Posts go through a count-based lifecycle:
-- **Day 0** (`update_count=-1`): Initial scrape and ingest
-- **Day 1** (`update_count=0`): Skip (too early for meaningful changes)
-- **Day 2** (`update_count=1`): Refresh - re-ingest if content changed (post edits, new comments, or comment edits), deleted posts automatically removed from datastore and database when detected
-- **Day 3** (`update_count=2`): Freeze - no more updates
+- **Day 1** (`update_count=-1`): Initial scrape and ingest
+- **Day 2** (`update_count=0`): Skip (no fetch from Reddit)
+- **Day 3** (`update_count=1`): Refresh - fetch from Reddit, re-ingest if content changed, otherwise metadata-only update (score/num_comments/upvote_ratio)
+- **Day 4** (`update_count=2`): Refresh and freeze - same as Day 3, then status set to FROZEN
 
-**Retention:** posts are stored in Supabase for up to 30 days (unless deleted/removed). 
-**Freshness tracking:** posts are checked for updates for up to 3 days; after that, they are considered stable and no longer updated
+Deleted posts are automatically removed from datastore and database when detected during refresh.
+
+**Retention:** posts are stored in Supabase for up to 30 days (unless deleted/removed).
+**Freshness tracking:** posts are checked for updates for up to 4 days; after that, they are considered stable and no longer updated
 
 ## Setup
 

@@ -366,9 +366,9 @@ class ContextualClient:
         - Existing, content changed: Re-ingest (delete + ingest)
         - Existing, content same: Skip (nothing to update)
 
-        Note: We don't do metadata-only updates because the HTML content
-        contains the score/num_comments. Updating metadata without re-ingesting
-        would create inconsistency between metadata and content.
+        Note: Metadata-only updates (for score/num_comments changes) are handled
+        at the pipeline level via set_metadata(). The HTML stats line becomes a
+        point-in-time snapshot, while metadata always reflects current values.
         """
         if not existing_doc_id:
             # New document
