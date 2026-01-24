@@ -6,7 +6,7 @@ A data pipeline that scrapes Reddit posts from RAG-focused subreddits and syncs 
 
 - **Scraping**: Fetches ALL posts within a time window
 - **Supabase Backend**: PostgreSQL for state management and tracking
-- **Update Cycle**: Posts tracked for 3 days with refresh, then frozen
+- **Update Cycle**: Posts tracked for 4 days with refresh, then frozen
 - **Re-ingestion**: Only re-ingest when content changes (post edits, new comments, or comment edits)
 - **Deletion Handling**: Automatically removes deleted/removed posts from datastore (Reddit Data API compliance)
 - **Bot Filtering**: Excludes AutoModerator and known bots
