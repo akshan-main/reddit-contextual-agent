@@ -184,23 +184,30 @@ class ContextualClient:
             dt_utc = post.created_utc.astimezone(timezone.utc)
         dt_pacific = dt_utc.astimezone(PACIFIC_TZ)
 
-        return {
-            "url": post.full_url,  # Included in attributions
+        md = {
+            "url": post.full_url,
             "subreddit": post.subreddit,
             "author": post.author,
-            "title": post.title,  # For exact title matching
-            "score": post.score,
-            "upvote_ratio": post.upvote_ratio,  # For filtering controversial posts
-            "num_comments": post.num_comments,
-            "created_utc": post.created_utc.isoformat(),
+            "title": post.title,
+            "score": int(post.score) if post.score is not None else 0,
+            "num_comments": int(post.num_comments) if post.num_comments is not None else 0,
+            "upvote_ratio_bp": int(round(float(post.upvote_ratio) * 10000)) if post.upvote_ratio is not None else None,
+            "created_utc": dt_utc.isoformat(),
             "created_pacific": dt_pacific.isoformat(),
-            "date_pacific": dt_pacific.strftime("%Y-%m-%d"),  # For "posts from yesterday" queries
+            "date_pacific": dt_pacific.strftime("%Y-%m-%d"),
             "post_id": post.id,
-            "is_self": post.is_self,  # Text post vs link post
-            # For domain filtering
-            "external_url": post.url if not post.is_self and post.url != post.full_url else None,
-            "flair": post.link_flair_text,  # For category filtering
+            "is_self": bool(post.is_self),
         }
+
+        # Only include optional fields if they have values
+        if not post.is_self and post.url and post.url != post.full_url:
+            md["external_url"] = post.url
+
+        if post.link_flair_text is not None:
+            md["flair"] = post.link_flair_text
+
+        # Filter out None values from final dict
+        return {k: v for k, v in md.items() if v is not None}
 
     @retry(
         retry=retry_if_exception_type(Exception),
@@ -248,13 +255,27 @@ class ContextualClient:
             ),
         )
 
-        result_id = getattr(result, "id", doc_id)
+        # Get the actual document ID from API response
+        result_id = getattr(result, "id", None)
+        if result_id is None:
+            logger.error(
+                "ingest_response_missing_id",
+                post_id=post.id,
+                result_type=type(result).__name__,
+                result_attrs=str(dir(result)),
+            )
+            result_id = doc_id  # Fallback
 
-        # Step 2: Set metadata for filtering and attribution
-        try:
-            await self.set_metadata(result_id, post)
-        except Exception as e:
-            logger.warning("set_metadata_after_ingest_failed", error=str(e))
+        logger.info(
+            "document_ingested",
+            post_id=post.id,
+            document_id=result_id,
+            id_source="api_response" if result_id != doc_id else "fallback",
+        )
+
+        ok = await self.set_metadata(result_id, post)
+        if not ok:
+            logger.error("metadata_failed_after_ingest", document_id=result_id, post_id=post.id)
 
         logger.info(
             "document_ingested",
@@ -275,6 +296,9 @@ class ContextualClient:
             raise RuntimeError("Client not connected")
 
         metadata = self._get_metadata(post)
+        if not metadata:
+            logger.info("metadata_empty_skipping", document_id=document_id, post_id=post.id)
+            return True
 
         logger.info(
             "setting_metadata",

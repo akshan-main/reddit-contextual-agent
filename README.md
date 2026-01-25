@@ -130,7 +130,7 @@ Posts are converted to HTML documents with:
 - All comments (sorted by score)
 - Timezone (Pacific + UTC)
 
-Metadata includes: `subreddit`, `author`, `title`, `score`, `upvote_ratio`, `num_comments`, `created_utc`, `created_pacific`, `date_pacific`, `post_id`, `is_self`, `external_url`, `flair`
+Metadata includes: `subreddit`, `author`, `title`, `score`, `upvote_ratio_bp` (integer basis points, e.g. 9200 = 92%), `num_comments`, `created_utc`, `created_pacific`, `date_pacific`, `post_id`, `is_self`, `external_url`, `flair`
 
 ### Sample Ingested Documents
 
@@ -149,5 +149,96 @@ reddit-contextual-agent/
 └── .env.example
 ```
 
+## Verifying Metadata Updates
+
+To verify that metadata is being sent correctly to Contextual AI and to catch any document ID mismatches:
+
+### 1. Run the pipeline and capture logs
+
+```bash
+python -m reddit_agent --mode scrape --log-level INFO 2>&1 | tee pipeline.log
+```
+
+Look for logs with `document_id=` to capture the ID, e.g.:
+```
+ingesting_document post_id=abc123 document_id=12345678-...
+metadata_updated document_id=12345678-...
+```
+
+**Critical:** Verify that both lines have the **same** `document_id`. If they differ, there's a document ID mismatch bug.
+
+### 2. Query the metadata endpoint
+
+```bash
+export CONTEXTUAL_API_KEY="your_key"
+export DATASTORE_ID="your_datastore_id"
+export DOC_ID="12345678-..."  # From logs above
+
+curl -sS -H "Authorization: Bearer $CONTEXTUAL_API_KEY" \
+"https://api.contextual.ai/v1/datastores/$DATASTORE_ID/documents/$DOC_ID/metadata" | jq '.custom_metadata'
+```
+
+**Expected output:**
+```json
+{
+  "url": "https://reddit.com/r/RAG/comments/abc123/...",
+  "subreddit": "RAG",
+  "author": "username",
+  "title": "Discussion about RAG",
+  "score": 245,
+  "upvote_ratio_bp": 9200,
+  "num_comments": 12,
+  "created_utc": "2026-01-25T10:30:45.123456+00:00",
+  "created_pacific": "2026-01-25T02:30:45.123456-08:00",
+  "date_pacific": "2026-01-25",
+  "post_id": "abc123",
+  "is_self": true,
+  "flair": "Discussion"
+}
+```
+
+**If metadata shows `{}`:** See troubleshooting below.
+
+### 3. Monitor metadata-only updates
+
+Run update mode and watch for metadata changes:
+
+```bash
+python -m reddit_agent --mode update --log-level DEBUG 2>&1 | grep "metadata"
+```
+
+Expected log when only score changes:
+```
+metadata_only_update post_id=abc123 old_score=150 new_score=245
+metadata_updated document_id=12345678-...
+```
+
+### Troubleshooting
+
+**Metadata is empty `{}`:**
+
+1. Check for API errors in logs:
+   ```bash
+   grep "set_metadata_failed\|ingest_response_missing_id" pipeline.log
+   ```
+
+2. Verify document exists:
+   ```bash
+   curl -sS -H "Authorization: Bearer $CONTEXTUAL_API_KEY" \
+   "https://api.contextual.ai/v1/datastores/$DATASTORE_ID/documents/$DOC_ID" | jq '.document.id'
+   ```
+
+3. Verify datastore ID is correct:
+   ```bash
+   curl -sS -H "Authorization: Bearer $CONTEXTUAL_API_KEY" \
+   "https://api.contextual.ai/v1/datastores" | jq '.datastores[] | .id'
+   ```
+
+**Document ID mismatch:**
+
+If logs show different IDs for ingest vs metadata update, check:
+- `ingest_response_missing_id` error in logs (means API isn't returning ID)
+- Fallback to `reddit_post_<id>` format being used instead of API UUID
+
 # NOTE
-The license in this repository applies to the code in this repository. Scraped Reddit content remains subject to Reddit’s terms and the original authors’ rights.
+The license in this repository applies to the code in this repository. Scraped Reddit content remains subject to Reddit's terms and the original authors' rights.

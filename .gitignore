@@ -1,4 +1,3 @@
-# Environment (keep .env.example, ignore actual secrets)
 .env
 __pycache__/
 *.py[cod]
@@ -22,7 +21,6 @@ wheels/
 *.egg
 venv/
 .venv/
-ENV/
 data/
 *.db
 *.sqlite
