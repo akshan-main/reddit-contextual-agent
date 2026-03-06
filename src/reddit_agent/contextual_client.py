@@ -7,7 +7,6 @@ Uses the contextual-client SDK to:
 """
 
 import asyncio
-import json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -198,6 +197,7 @@ class ContextualClient:
             "date_pacific": dt_pacific.strftime("%Y-%m-%d"),
             "post_id": post.id,
             "is_self": bool(post.is_self),
+            "total_awards_received": int(post.total_awards_received) if post.total_awards_received is not None else 0,
         }
 
         # Only include optional fields if they have values
@@ -206,6 +206,9 @@ class ContextualClient:
 
         if post.link_flair_text is not None:
             md["flair"] = post.link_flair_text
+
+        if post.media_url is not None:
+            md["media_url"] = post.media_url
 
         # Filter out None values from final dict
         return {k: v for k, v in md.items() if v is not None}
