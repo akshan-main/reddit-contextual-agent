@@ -7,6 +7,7 @@ Uses the contextual-client SDK to:
 """
 
 import asyncio
+import json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -247,12 +248,15 @@ class ContextualClient:
         loop = asyncio.get_event_loop()
 
         # Step 1: Ingest the HTML document
+        # Use "basic" parse mode for text-only docs ($3/1000 pages vs $40 for standard)
+        # Format per API docs: https://docs.contextual.ai/api-reference/datastores-documents/ingest-document
+        ingest_config = json.dumps({"parsing": {"parse_mode": "basic"}})
         result = await loop.run_in_executor(
             None,
             lambda: self._client.datastores.documents.ingest(
                 datastore_id=self.config.datastore_id,
                 file=file_tuple,
-                parse_mode="basic",  # Text-only: $3/1000 pages (vs $40 for standard/multimodal)
+                configuration=ingest_config,
             ),
         )
 
