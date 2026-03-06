@@ -252,6 +252,7 @@ class ContextualClient:
             lambda: self._client.datastores.documents.ingest(
                 datastore_id=self.config.datastore_id,
                 file=file_tuple,
+                parse_mode="basic",  # Text-only: $3/1000 pages (vs $40 for standard/multimodal)
             ),
         )
 
